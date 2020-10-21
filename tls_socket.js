@@ -11,9 +11,12 @@ const spawn     = require('child_process').spawn;
 const stream    = require('stream');
 const tls       = require('tls');
 const util      = require('util');
+const os        = require('os');
+const net       = require('net');
 
 // npm packages
 const async     = require('async');
+const ffi          = require('ffi');
 const openssl   = require('openssl-wrapper').exec;
 exports.config  = require('haraka-config');  // exported for tests
 
@@ -23,6 +26,14 @@ const certsByHost = {};
 const ctxByHost = {};
 let ocsp;
 let ocspCache;
+
+
+/* Tools for binding to socket to a inet device */
+const  SOL_SOCKET = 1;
+const  SO_BINDTODEVICE = 25;
+const  sockopt = ffi.Library(null, {
+    'setsockopt': ['int', ['int', 'int', 'int', 'string', 'int']]
+});
 
 // provides a common socket for attaching
 // and detaching from either main socket, or crypto socket
@@ -688,6 +699,15 @@ function createServer (cb) {
     return server;
 }
 
+function _get_interface_for_ip (ip) {
+    const interfaces = os.networkInterfaces();
+    for( let iface in interfaces) {
+        if(interfaces[iface][0].address === ip) {
+            return iface
+        }
+    }
+}
+
 function connect (port, host, cb) {
     let conn_options = {};
     if (typeof port === 'object') {
@@ -699,7 +719,19 @@ function connect (port, host, cb) {
         conn_options.host = host;
     }
 
-    const cryptoSocket = net.connect(conn_options);
+    let cryptoSocket;
+
+    if(conn_options.localAddress && _get_interface_for_ip(conn_options.localAddress)) {
+        const iface = _get_interface_for_ip(conn_options.localAddress);
+        const ifaceBuffer = new Buffer.from(iface);
+        const socket = new net.Socket({handle: net._createServerHandle(conn_options.localAddress)});
+        sockopt.setsockopt(socket._handle.fd, SOL_SOCKET, SO_BINDTODEVICE, ifaceBuffer, ifaceBuffer.length);
+        delete conn_options.localAddress;
+        cryptoSocket = socket.connect(conn_options)
+    } else {
+        cryptoSocket = net.connect(conn_options);
+    }
+
 
     const socket = new pluggableStream(cryptoSocket);
 
