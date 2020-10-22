@@ -4,7 +4,6 @@
 /*--------------------------------------------------------------------------*/
 
 // node.js built-ins
-import {createSocket} from "./socket";
 
 const cluster   = require('cluster');
 const net       = require('net');
@@ -20,6 +19,7 @@ const openssl   = require('openssl-wrapper').exec;
 exports.config  = require('haraka-config');  // exported for tests
 
 const log       = require('./logger');
+const socket    = require("./socket");
 
 const certsByHost = {};
 const ctxByHost = {};
@@ -692,7 +692,7 @@ function createServer (cb) {
 }
 
 function connect (port, host, cb) {
-    const socket = new pluggableStream(createSocket(port, host));
+    const socket = new pluggableStream(socket.createSocket(port, host));
 
     socket.upgrade = (options, cb2) => {
         socket.clean();
