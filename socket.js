@@ -52,7 +52,6 @@ function createSocket(port, host) {
 
         const iface = get_interface_for_ip(conn_options.localAddress);
         const ifaceBuffer = new Buffer.from(iface);
-        const socket = new net.Socket({handle: net._createServerHandle(conn_options.localAddress)});
         Object.defineProperty(socket, "_handle", {
             get: () => handle,
             set: (value) => {
