@@ -12,7 +12,6 @@ const stream    = require('stream');
 const tls       = require('tls');
 const util      = require('util');
 const os        = require('os');
-const net       = require('net');
 
 // npm packages
 const async     = require('async');
