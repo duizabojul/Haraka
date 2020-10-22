@@ -67,4 +67,4 @@ function createSocket(port, host) {
     }
 }
 
-export {createSocket};
+module.exports = {createSocket};
