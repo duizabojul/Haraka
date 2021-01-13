@@ -616,7 +616,7 @@ class HMailItem extends events.EventEmitter {
                 self.refcount++;
                 self.split_to_new_recipients(bounce_recips, "Some recipients rejected", hmail => {
                     self.discard();
-                    hmail.bounce(`Some recipients failed: ${bounce_recips.join(', ')}`, { rcpt: bounce_recips, mx });
+                    hmail.bounce(`Some recipients failed: ${bounce_recips.join(', ')}`, { bounce_recips, mx });
                 });
             }
             processing_mail = false;
@@ -1420,7 +1420,7 @@ class HMailItem extends events.EventEmitter {
                             err_handler(err, "tmp file rename");
                         }
                         else {
-                            const split_mail = new HMailItem (fname, dest_path);
+                            const split_mail = new HMailItem (fname, dest_path, hmail.notes);
                             split_mail.once('ready', () => {
                                 cb(split_mail);
                             });

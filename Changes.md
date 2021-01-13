@@ -1,6 +1,40 @@
 
 ## NEXT - 2020-MM-DD
 
+### Changes
+
+- use address-rfc2821 2.0.0
+- drop support for node 10
+- http: use CDN for bootstrap/jquery, drop bower
+
+### New features
+
+- 
+
+### Fixes
+
+- 
+
+## 2.8.27 - 2021-01-05
+
+### Changes
+
+- bump verions of several dependencies #2888
+- propagate hmail notes to split copies #2887
+- log.ini: add json to list of formats in config doc #2881
+- exclude port 587 from TLS NO-GO feature #2875
+- strip _haraka-plugin-_ prefixes off plugin names in config/plugins #2873
+- pass smtp.ini config from Server into connections & transactions #2872
+
+### New features
+
+- add ability to disable SMTPUTF8 advertisement #2866
+
+### Fixes
+
+- assure headers.max_lines is initialized as integer #2878
+- require haraka-net-utils >= 1.2.2  #2876
+
 
 ## 2.8.26 - 2020-11-18
 
