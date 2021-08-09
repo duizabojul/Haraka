@@ -47,7 +47,7 @@ function _create_socket (pool_name, port, host, local_addr, is_unix_socket, call
 function get_pool (port, host, auth_user, auth_pass, local_addr, is_unix_socket, max) {
     port = port || 25;
     host = host || 'localhost';
-    const name = `outbound::${port}:${host}:${local_addr}:${obc.cfg.pool_timeout}`;
+    let name = `outbound::${port}:${host}:${local_addr}:${obc.cfg.pool_timeout}`;
     if (auth_user && auth_pass){
         name += `:${auth_user}:${auth_pass}`;
     }
