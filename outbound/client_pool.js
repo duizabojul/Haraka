@@ -44,10 +44,14 @@ function _create_socket (pool_name, port, host, local_addr, is_unix_socket, call
 }
 
 // Separate pools are kept for each set of server attributes.
-function get_pool (port, host, local_addr, is_unix_socket, max) {
+function get_pool (port, host, auth_user, auth_pass, local_addr, is_unix_socket, max) {
     port = port || 25;
     host = host || 'localhost';
     const name = `outbound::${port}:${host}:${local_addr}:${obc.cfg.pool_timeout}`;
+    if (auth_user && auth_pass){
+        name += `:${auth_user}:${auth_pass}`;
+    }
+
     if (!server.notes.pool) server.notes.pool = {};
     if (server.notes.pool[name]) return server.notes.pool[name];
 
@@ -92,12 +96,12 @@ function get_pool (port, host, local_addr, is_unix_socket, max) {
 }
 
 // Get a socket for the given attributes.
-exports.get_client = (port, host, local_addr, is_unix_socket, callback) => {
+exports.get_client = (port, host, auth_user, auth_pass, local_addr, is_unix_socket, callback) => {
     if (obc.cfg.pool_concurrency_max == 0) {
         return _create_socket(null, port, host, local_addr, is_unix_socket, callback);
     }
 
-    const pool = get_pool(port, host, local_addr, is_unix_socket, obc.cfg.pool_concurrency_max);
+    const pool = get_pool(port, host, auth_user, auth_pass, local_addr, is_unix_socket, obc.cfg.pool_concurrency_max);
     if (pool.waitingClientsCount() >= obc.cfg.pool_concurrency_max) {
         return callback("Too many waiting clients for pool", null);
     }
