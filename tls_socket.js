@@ -442,7 +442,6 @@ exports.get_certs_dir = (tlsDir, done) => {
         );
     }
 
-
     tlss.config.getDir(tlsDir, {}, (iterErr, files) => {
         if (iterErr) return done(iterErr);
 
