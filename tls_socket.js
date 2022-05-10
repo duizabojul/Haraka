@@ -11,6 +11,7 @@ const spawn     = require('child_process').spawn;
 const stream    = require('stream');
 const tls       = require('tls');
 const util      = require('util');
+const fs        = require('fs');
 
 // npm packages
 const async     = require('async');
@@ -428,6 +429,18 @@ function SNICallback (servername, sniDone) {
 
 exports.get_certs_dir = (tlsDir, done) => {
     const tlss = this;
+
+    if (!this._tlsWatcherSet) {
+        this._tlsWatcherSet = true;
+
+        fs.watch(
+            path.resolve(exports.config.root_path, tlsDir),
+            { persistent: false, recursive: true },
+            () => {
+                process.exit(1)
+            }
+        );
+    }
 
     tlss.config.getDir(tlsDir, {}, (iterErr, files) => {
         if (iterErr) return done(iterErr);
