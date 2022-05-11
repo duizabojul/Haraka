@@ -431,7 +431,7 @@ exports.get_certs_dir = (tlsDir, done) => {
 
         fs.watch(
             path.resolve(exports.config.root_path, tlsDir),
-            { persistent: false, recursive: true },
+            { persistent: false },
             () => {
                 exports.get_certs_dir(tlsDir, () => void 0);
             }
