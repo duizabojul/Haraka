@@ -187,6 +187,12 @@ class Connection {
         });
 
         self.client.on('timeout', () => {
+            // FIN has sent, when timeout just destroy socket
+            if (self.state >= states.DISCONNECTED) {
+                self.client.destroy();
+                self.loginfo(`timeout, destroy socket (state:${self.state})`)
+                return;
+            }
             if (self.state >= states.DISCONNECTING) return;
             self.respond(421, 'timeout', () => {
                 self.fail('client connection timed out', log_data);
@@ -1588,7 +1594,7 @@ class Connection {
             line[0] === 0x2e &&
             line[1] === 0x0a) {
             this.lognotice('Client sent bare line-feed - .\\n rather than .\\r\\n');
-            this.respond(451, "Bare line-feed; see http://haraka.github.com/barelf.html", () => {
+            this.respond(451, "Bare line-feed; see http://haraka.github.io/barelf/", () => {
                 self.reset_transaction();
             });
             return;

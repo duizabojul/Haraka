@@ -1,8 +1,33 @@
 
-## NEXT - 2020-MM-DD
+## NEXT - 2021-MM-DD
 
 ### Changes
 
+- fix attachment.js error handling with complex archive #3035
+- reformat dkim signature to multi-line #2991
+- add lots of `if (!transaction) return` in places #2732
+- use optional chaining when accessing transactions #2732
+- update generic-pool 2.5 -> 3.8 (promises) #3033
+- smtp_client: run "secured" once, fixes  #3020
+- auth_proxy: run "secured" only once, improvement for #3022
+- windows-latest is now windows-2022, which has issues, specify 2019
+- smtp_client: pass args as objects (was positional)
+- add explicit dependency on node-gyp 9
+- dkim_sign: remove spurious error logging #3034
+
+
+## 2.8.28 - 2021-10-14
+
+### Changes
+
+- breaking: dkim.js has changed the constructor opts
+- tls_socket: more flexible pem file parsing #2986
+    - move bad certs into different directory, avoid test suite noise
+- added ability to define a default relay in relay_dest_domains
+- spamassassin: replace msg_too_big & should_check with should_skip #2972
+- spamassassin: allow returning DENYSOFT on errors #2967
+- dep: use caret version range for all dependencies #2965
+- outbound: disable outbound to localhost by default #2952
 - connection error logging: use key-value paris #2921
 - tls: change default to NOT send TLS client certs #2902
 - dep: redis is now a dependency #2896
@@ -13,7 +38,11 @@
 ### New features
 
 - tls: require secure and verified sockets for configured hosts/domains
+- DKIM plugin has got a couple of config options now
 - tls: add `no_starttls_ports` - an array of incoming ports where STARTTLS is not advertised
+- outbound: add local_mx_ok config #2952
+- skip plugins at runtime by pushing name into transaction.skip_plugins #2966
+- outbound: add ability to specify delay times for temporary fails in `temp_fail_intervals` #2969
 
 ### Fixes
 
@@ -23,6 +52,7 @@
 - Received header TLS section adheres more closely to RFC 8314 #2903
 - use RFC-2045 Quoted-Printable in email message body
 - use RFC-2047 Q encoded-words in email headers
+
 
 ## 2.8.27 - 2021-01-05
 
@@ -99,6 +129,7 @@
 * fix bannering on nested mime parts #2737
 * TLS: don't abort loading certs in config/tls dir when an error is encountered. Process every cert file and then emit errors. #2729
 * restore TLS version, correctly #2723
+
 
 ## 2.8.25 - 2019-10-11
 
@@ -443,7 +474,7 @@
     * update js-yaml to version 3.10.0 #2097
     * repackage p0f plugin to NPM #2076
     * ES6: replace var with const or let  #2073
-    
+
 * New Features
     * Bounces can have an HTML part #2091
 * Fixes

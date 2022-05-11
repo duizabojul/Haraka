@@ -18,6 +18,10 @@ exports.load_spamassassin_ini = function () {
             '+check.private_ip',
             '+check.local_ip',
             '+check.relay',
+
+            '-defer.error',
+            '-defer.connect_timeout',
+            '-defer.scan_timeout',
         ],
     }, () => {
         plugin.load_spamassassin_ini();
@@ -48,11 +52,10 @@ exports.load_spamassassin_ini = function () {
 exports.hook_data_post = function (next, connection) {
     const plugin = this;
     const conn = connection;
+
+    if (plugin.should_skip(conn)) return next();
+
     const txn  = connection.transaction;
-
-    if (plugin.msg_too_big(conn)) return next();
-    if (!plugin.should_check(conn)) return next();
-
     txn.remove_header(plugin.cfg.main.spamc_auth_header); // just to be safe
 
     const username        = plugin.get_spamd_username(conn);
@@ -274,6 +277,8 @@ exports.get_spamd_headers = function (conn, username) {
 
 exports.get_spamd_socket = function (next, conn, headers) {
     const plugin = this;
+    const txn = conn.transaction;
+
     // TODO: support multiple spamd backends
 
     const socket = new sock.Socket();
@@ -282,7 +287,7 @@ exports.get_spamd_socket = function (next, conn, headers) {
 
     socket.on('connect', function () {
         // Abort if the transaction is gone
-        if (!conn.transaction) {
+        if (!txn) {
             plugin.logwarn(conn, 'Transaction gone, cancelling SPAMD connection');
             socket.end();
             return;
@@ -296,20 +301,22 @@ exports.get_spamd_socket = function (next, conn, headers) {
     });
 
     socket.on('error', err => {
-        conn.logerror(plugin, `connection failed: ${err}`);
-        // TODO: optionally DENYSOFT
-        // TODO: add a transaction note
+        socket.destroy();
+        if (txn) txn.results.add(plugin, {err: `socket error: ${err.message}` });
+        if (plugin.cfg.defer.error) return next(DENYSOFT, 'spamd scan error');
         return next();
     });
 
     socket.on('timeout', function () {
+        socket.destroy();
         if (!this.is_connected) {
-            conn.logerror(plugin, 'spamd connection timed out');
+            if (txn) txn.results.add(plugin, {err: `socket connect timeout` });
+            if (plugin.cfg.defer.connect_timeout) return next(DENYSOFT, 'spamd connect timeout');
         }
         else {
-            conn.logerror(plugin, 'timeout waiting for results');
+            if (txn) txn.results.add(plugin, {err: `timeout waiting for results` });
+            if (plugin.cfg.defer.scan_timeout) return next(DENYSOFT, 'spamd scan timeout');
         }
-        socket.end();
         return next();
     });
 
@@ -325,18 +332,6 @@ exports.get_spamd_socket = function (next, conn, headers) {
     }
 
     return socket;
-}
-
-exports.msg_too_big = function (conn) {
-    const plugin = this;
-    if (!plugin.cfg.main.max_size) return false;
-
-    const size = conn.transaction.data_bytes;
-
-    const max = plugin.cfg.main.max_size;
-    if (size <= max) { return false; }
-    conn.loginfo(plugin, `skipping, size ${utils.prettySize(size)} exceeds max: ${utils.prettySize(max)}`);
-    return true;
 }
 
 exports.log_results = function (conn, spamd_response) {
@@ -357,33 +352,44 @@ exports.log_results = function (conn, spamd_response) {
         emit: true});
 }
 
-exports.should_check = function (conn) {
-    const plugin = this;
+exports.should_skip = function (connection = {}) {
+    const { transaction } = connection;
+    if (!transaction) return true;
 
-    let result = true;  // default
+    // a message might be skipped for multiple reasons, store each in results
+    let result = false;  // default
 
-    if (plugin.cfg.check.authenticated == false && conn.notes.auth_user) {
-        conn.transaction.results.add(plugin, { skip: 'authed'});
-        result = false;
+    const max = this.cfg.main.max_size;
+    if (max) {
+        const size = connection.transaction.data_bytes;
+        if (size > max) {
+            connection.transaction.results.add(this, { skip: `size ${utils.prettySize(size)} exceeds max: ${utils.prettySize(max)}`});
+            result = true;
+        }
     }
 
-    if (plugin.cfg.check.relay == false && conn.relaying) {
-        conn.transaction.results.add(plugin, { skip: 'relay'});
-        result = false;
+    if (this.cfg.check.authenticated == false && connection.notes.auth_user) {
+        connection.transaction.results.add(this, { skip: 'authed'});
+        result = true;
     }
 
-    if (plugin.cfg.check.local_ip == false && conn.remote.is_local) {
-        conn.transaction.results.add(plugin, { skip: 'local_ip'});
-        result = false;
+    if (this.cfg.check.relay == false && connection.relaying) {
+        connection.transaction.results.add(this, { skip: 'relay'});
+        result = true;
     }
 
-    if (plugin.cfg.check.private_ip == false && conn.remote.is_private) {
-        if (plugin.cfg.check.local_ip == true && conn.remote.is_local) {
+    if (this.cfg.check.local_ip == false && connection.remote.is_local) {
+        connection.transaction.results.add(this, { skip: 'local_ip'});
+        result = true;
+    }
+
+    if (this.cfg.check.private_ip == false && connection.remote.is_private) {
+        if (this.cfg.check.local_ip == true && connection.remote.is_local) {
             // local IPs are included in private IPs
         }
         else {
-            conn.transaction.results.add(plugin, { skip: 'private_ip'});
-            result = false;
+            connection.transaction.results.add(this, { skip: 'private_ip'});
+            result = true;
         }
     }
 
